@@ -1,28 +1,48 @@
-# reviews
+---
+type: Metric
+title: "Reviews"
+description: "Number of reviews."
+tags: [review]
+aliases: ["review count", "评价数"]
+unit: reviews
+status: stable
+generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
+verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+sources:
+  - id: kaggle
+    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+    title: Brazilian E-Commerce Public Dataset by Olist
+  - id: fct-reviews
+    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_reviews.md
+    title: fct_reviews table context
+---
 
-**Label:** Reviews  
-**Type:** simple  
-**Description:** Number of reviews.  
-**Semantic models:** `reviews`  
+# Definition
 
-## Dimensions
+Count of reviews, one per reviewed order (latest review when an order has several).
 
-Group by or filter this metric with any of the dimensions below. `metric_time` accepts a granularity suffix: `metric_time__day`, `metric_time__week`, `metric_time__month`, `metric_time__quarter`, `metric_time__year`.
+# Computation
 
-- `metric_time`
-- `review__customer_state`
-- `review__order_status`
-- `review__review_creation_ts`
-- `review__review_score`
-
-## Query
-
-Over time:
-```json
-{"metrics": ["reviews"], "group_by": ["metric_time__month"], "order_by": ["metric_time__month"]}
+```sql
+SELECT COUNT(*) AS reviews
+FROM fct_reviews;
 ```
 
-Broken down, filtered and ranked (see `../README.md` for every parameter):
-```json
-{"metrics": ["reviews"], "group_by": ["review__customer_state"], "where": ["{{ Dimension('review__customer_state') }} IS NOT NULL"], "order_by": ["-reviews"], "limit": 10}
-```
+One row per reviewed order.
+
+# Dimensions
+
+- [Review date](/dimensions/review-date.md)
+- [Review score](/dimensions/review-score.md)
+- [Order status](/dimensions/order-status.md)
+- [Customer state](/dimensions/customer-state.md)
+
+# Notes
+
+- Full-period baseline: 98,673 reviews.
+- The raw review file has 99,224 rows; duplicates per order were removed.
+
+# Related metrics
+
+- [Average Review Score](/metrics/average-review-score.md)
+- [Low Reviews](/metrics/low-reviews.md)

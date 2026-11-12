@@ -8,4 +8,4 @@ sql: |
   FROM dim_customers
 assertions:
   - type: tool_call
-    tool: execute_semantic_query
+    tool: execute_sql

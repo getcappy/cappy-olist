@@ -2,8 +2,9 @@
 
 来源：[Kaggle — Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)，
 数据由 Olist 于 2018 年公开，覆盖 2016-09 至 2018-10 的巴西电商交易。CSV 共 9 个文件、约 45 MB 压缩。
-本项目把原始 CSV 原样落地为 `raw_*` 表，再由 dbt 构建 `stg_*` 和分析层 `fct_*` / `dim_*`，
-所有业务指标通过 MetricFlow 语义层（`semantics/semantic_manifest.json`）统一口径。
+本项目把原始 CSV 原样落地为 `raw_*` 表，再用纯 SQL（`sql/build_warehouse.sql`）构建 `stg_*` 和
+分析层 `fct_*` / `dim_*`。所有业务指标以 OKF v0.2 markdown 概念文件定义在 `semantics/metrics/`，
+由 cappy agent 读取后用 `execute_sql` 按 `# Computation` 的官方口径计算。
 
 ## 1. 原始文件
 
@@ -126,22 +127,32 @@
 
 > 复购率低是该数据集的真实特征（Olist 平台以一次性购买为主），不是查询错误。
 
-## 5. 复现步骤
+## 5. 语义模型与复现步骤
+
+指标定义在 `semantics/`（OKF v0.2 知识包）：
+
+```text
+semantics/index.md              29 个指标 / 13 个维度，入口
+semantics/metrics/<metric>.md   每个指标一个概念：Definition / Computation / Dimensions / Notes
+semantics/dimensions/<dim>.md   维度表达式与可用表
+semantics/log.md                变更记录
+```
+
+复现：
 
 ```bash
 # 1. 下载并解压 Kaggle 数据到 ../olist-data/raw
 python scripts/load_olist.py
 
-# 2. 构建 dbt 星型模型并生成 MetricFlow manifest
-OLIST_DUCKDB_PATH=/Users/mry/Downloads/cappy-agent/olist-data/olist.duckdb \
-  dbt run  --project-dir semantics/olist_dbt --profiles-dir semantics/olist_dbt
-OLIST_DUCKDB_PATH=/Users/mry/Downloads/cappy-agent/olist-data/olist.duckdb \
-  dbt parse --project-dir semantics/olist_dbt --profiles-dir semantics/olist_dbt
-cp semantics/olist_dbt/target/semantic_manifest.json semantics/semantic_manifest.json
+# 2. 构建纯 SQL 星型模型（stg_* / fct_* / dim_* 视图）
+python scripts/build_marts.py
 
-# 3. 重新生成表文档与指标文档
+# 3. 校验 OKF 知识包（frontmatter 与内部链接）
+python scripts/validate_okf.py
+
+# 4. 重新生成 cappy 表文档
 cappy sync
 ```
 
-`semantics/olist_dbt/target/` 是 dbt 构建产物，不参与 Git 版本管理；提交的是
-`semantics/semantic_manifest.json`（编译后的语义清单）。
+不需要 dbt、MetricFlow 或 `semantic_manifest.json`；`semantics/` 下只有 markdown 概念文件，
+可以直接用 Git 审阅和 diff。

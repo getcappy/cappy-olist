@@ -8,4 +8,4 @@ sql: |
   LIMIT 5
 assertions:
   - type: tool_call
-    tool: execute_semantic_query
+    tool: execute_sql

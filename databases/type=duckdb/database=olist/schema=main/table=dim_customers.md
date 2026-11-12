@@ -38,17 +38,17 @@ tags: []
 
 | customer_unique_id | customer_state | customer_city | first_order_ts | last_order_ts | order_count | delivered_order_count | total_gmv | avg_review_score | is_repeat_customer |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 76b029c87118a29f2e3de420f5ec2fa2 | MG | uberlandia | 2017-12-28 10:45:14 | 2017-12-28 10:45:14 | 1 | 1 | 372.52 | 5.0 | False |
-| a9a77b4e25980b7ca58cb71f878abb27 | MG | itajuba | 2018-03-26 23:43:27 | 2018-03-26 23:43:27 | 1 | 1 | 59.78 | 5.0 | False |
-| 4bc7250d4b42b3374eb6f41b12429592 | SP | sao paulo | 2017-02-06 16:49:19 | 2017-02-06 16:49:19 | 1 | 1 | 251.28 | 5.0 | False |
-| f34cd7fd85a1f8baff886edf09567be3 | SC | timbo | 2017-08-22 12:49:28 | 2017-09-23 19:56:00 | 4 | 4 | 1236.76 | 5.0 | True |
-| 184ff574579b06c07152f2ba4ae74106 | RS | caxias do sul | 2018-03-06 10:19:54 | 2018-03-06 10:19:54 | 1 | 1 | 57.13 | 1.0 | False |
+| 9c0096673baf55453a50073f12d1a37f | GO | goiania | 2018-07-14 10:53:11 | 2018-07-14 10:53:11 | 1 | 1 | 62.39 | 5.0 | False |
+| eab761ccdba80c5b9a7f01b16543da0f | SP | sao paulo | 2017-12-27 12:10:16 | 2017-12-27 12:10:16 | 1 | 1 | 216.62 | 5.0 | False |
+| 52e57dd9218d99ea21b26f00c9151761 | RJ | cabo frio | 2018-05-09 13:48:11 | 2018-05-09 13:48:11 | 1 | 1 | 54.22 | 3.0 | False |
+| 82e96a74eeb99b61395a1403630fe437 | MG | uberlandia | 2018-05-30 10:12:07 | 2018-05-30 10:12:07 | 1 | 1 | 72.34 | 2.0 | False |
+| b6c083700ca8c135ba9f0f132930d4e8 | SP | suzano | 2017-09-05 15:32:33 | 2017-11-27 12:44:25 | 2 | 2 | 156.95 | 4.0 | True |
 
 # 数据剖析
 
 **Dataset:** `main`
 
-**Computed at:** `2026-11-12T09:38:49.067126+00:00`
+**Computed at:** `2026-11-12T09:50:31.244875+00:00`
 
 **Columns:** 10
 

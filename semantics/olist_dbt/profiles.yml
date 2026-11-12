@@ -1,9 +1,0 @@
-olist:
-  target: dev
-  outputs:
-    dev:
-      type: duckdb
-      # Absolute path in the local demo; override with OLIST_DUCKDB_PATH in another checkout.
-      path: "{{ env_var('OLIST_DUCKDB_PATH', '/Users/mry/Downloads/cappy-agent/olist-data/olist.duckdb') }}"
-      schema: main
-      threads: 4

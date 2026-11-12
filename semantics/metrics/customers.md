@@ -1,27 +1,48 @@
-# customers
+---
+type: Metric
+title: "Customers"
+description: "Number of distinct customers."
+tags: [customer]
+aliases: ["customer count", "客户数", "买家数"]
+unit: customers
+status: stable
+generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
+verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+sources:
+  - id: kaggle
+    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+    title: Brazilian E-Commerce Public Dataset by Olist
+  - id: dim-customers
+    resource: ../../databases/type=duckdb/database=olist/schema=main/table=dim_customers.md
+    title: dim_customers table context
+---
 
-**Label:** Customers  
-**Type:** simple  
-**Description:** Number of distinct customers (customer_unique_id).  
-**Semantic models:** `customers`  
+# Definition
 
-## Dimensions
+Count of distinct `customer_unique_id` in `dim_customers` (one row per customer).
 
-Group by or filter this metric with any of the dimensions below. `metric_time` accepts a granularity suffix: `metric_time__day`, `metric_time__week`, `metric_time__month`, `metric_time__quarter`, `metric_time__year`.
+# Computation
 
-- `customer__customer_state`
-- `customer__customer_type`
-- `customer__first_order_ts`
-- `metric_time`
-
-## Query
-
-Over time:
-```json
-{"metrics": ["customers"], "group_by": ["metric_time__month"], "order_by": ["metric_time__month"]}
+```sql
+SELECT COUNT(DISTINCT customer_unique_id) AS customers
+FROM dim_customers;
 ```
 
-Broken down, filtered and ranked (see `../README.md` for every parameter):
-```json
-{"metrics": ["customers"], "group_by": ["customer__customer_state"], "where": ["{{ Dimension('customer__customer_state') }} IS NOT NULL"], "order_by": ["-customers"], "limit": 10}
-```
+One row per customer. Never use `customer_id` from raw orders: it is per-order, not per-customer.
+
+# Dimensions
+
+- [Customer first order date](/dimensions/customer-first-order-date.md)
+- [Customer state](/dimensions/customer-state.md)
+- [Customer type](/dimensions/customer-type.md)
+
+# Notes
+
+- Full-period baseline: 96,096 customers.
+- The raw `customers` table has 99,441 `customer_id` values for those 96,096 people.
+
+# Related metrics
+
+- [Repeat Customers](/metrics/repeat-customers.md)
+- [Repeat Customer Rate](/metrics/repeat-customer-rate.md)
+- [Average Customer Value](/metrics/average-customer-value.md)

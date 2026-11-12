@@ -1,23 +1,31 @@
 # brazilian-ecommerce
 
-Olist 巴西电商数据集（Kaggle）的 cappy 分析项目：DuckDB 数据仓库 + dbt 星型模型 + MetricFlow 语义层。
+Olist 巴西电商数据集（Kaggle）的 cappy 分析项目：DuckDB 数据仓库 + 纯 SQL 星型模型 +
+**OKF（Open Knowledge Format v0.2）** markdown 指标/维度定义。
+
+不使用 dbt，也不使用 MetricFlow；指标由 cappy agent 读取 `semantics/metrics/*.md` 后通过
+`execute_sql` 按受控口径计算。
 
 ## 结构
 
 ```text
-config.yaml                 # DuckDB 数据源 + MetricFlow 语义层
-RULES.md                    # 业务规则、指标口径、分析流程
-databases/                  # cappy sync 生成的表文档（描述/关联关系为手写）
-semantics/
-  semantic_manifest.json    # dbt parse 产物，cappy 的语义层输入
-  metrics/, dimensions.md   # cappy sync 生成的指标/维度文档
-  olist_dbt/                # dbt 项目（staging / marts / semantic models）
-docs/olist-data-dictionary.md
-scripts/load_olist.py       # CSV → DuckDB raw 表
-scripts/build_semantics.sh  # dbt run + dbt parse + cappy sync
-tests/                      # cappy test 评测用例（指标口径回归）
-data 目录不在仓库内：数据集放在 ../../olist-data/（相对项目根目录为 ../olist-data）
+config.yaml                   # DuckDB 数据源（无 semantic_layer 配置）
+RULES.md                      # 业务规则、指标口径、分析流程
+databases/                    # cappy sync 生成的表文档（描述/关联关系为手写）
+semantics/                    # OKF 知识包
+  index.md                    #   入口：29 指标 / 13 维度
+  log.md                      #   变更记录
+  metrics/<metric>.md         #   type: Metric，Definition / Computation / Dimensions / Notes
+  dimensions/<dim>.md         #   type: Dimension，Definition / SQL / Available in / Notes
+sql/build_warehouse.sql       # 纯 SQL 构建 stg_* / fct_* / dim_* 视图
+scripts/load_olist.py         # CSV → DuckDB raw_* 表
+scripts/build_marts.py        # 执行 sql/build_warehouse.sql
+scripts/validate_okf.py       # 校验 OKF frontmatter 与内部链接
+docs/olist-data-dictionary.md # 数据字典、指标公式与全量基线
+tests/                        # cappy test 评测用例（指标口径回归）
 ```
+
+数据文件不在仓库内：CSV 和 DuckDB 放在项目上一级的 `olist-data/`。
 
 ## 从零复现
 
@@ -29,22 +37,44 @@ data 目录不在仓库内：数据集放在 ../../olist-data/（相对项目根
 pip install duckdb
 python scripts/load_olist.py
 
-# 3. 建星型模型 + 语义 manifest
-pip install dbt-duckdb "metricflow>=0.213,<0.214"
-export OLIST_DUCKDB_PATH="$(cd .. && pwd)/olist-data/olist.duckdb"
-./scripts/build_semantics.sh
+# 3. 建分析层视图 + 校验 OKF
+python scripts/build_marts.py
+python scripts/validate_okf.py
 
-# 4. 提交并推送上下文，cappy 会在收到 push 后重新同步 checkout
-git add -A && git commit -m "Add Olist DuckDB warehouse and semantic layer" && git push
+# 4. 重新生成表文档
+cappy sync
+
+# 5. 提交并推送上下文，cappy 会在收到 push 后重新同步 checkout
+git add -A && git commit -m "Add Olist DuckDB warehouse and OKF metrics" && git push
 ```
 
-## 语义层
+## 语义模型（OKF）
 
-29 个指标 / 26 个维度，覆盖 GMV、订单、客单价、取消率、延迟率、销量、类目、客户复购、
-支付方式和评价。查询示例：
+29 个指标、13 个维度，入口是 `semantics/index.md`。每个指标一个 markdown 概念文件，例如
+`semantics/metrics/gmv.md`：
 
-```json
-{"metrics": ["gmv", "orders", "average_order_value"], "group_by": ["order__customer_state"], "order_by": ["-gmv"], "limit": 10}
+```markdown
+---
+type: Metric
+title: "GMV"
+unit: BRL
+aliases: ["revenue", "营收", "销售额"]
+---
+# Definition
+...
+# Computation
+SELECT SUM(gmv) AS gmv FROM fct_orders;
+# Dimensions
+- [Order date](/dimensions/date.md)
+...
+# Notes
+- Full-period baseline: 15,843,553.24 BRL.
 ```
 
-指标定义见 `semantics/metrics/`，维度见 `semantics/dimensions.md`，业务口径见 `RULES.md`。
+agent 的使用方式：
+
+1. 读 `semantics/index.md` 或用别名 grep 找到指标文件；
+2. 读 `# Computation`，用 `execute_sql` 执行；
+3. 按 `# Dimensions` 里的维度表达式切分，比率指标先聚合分子分母再相除。
+
+指标定义见 `semantics/metrics/`，维度见 `semantics/dimensions/`，业务口径见 `RULES.md`。

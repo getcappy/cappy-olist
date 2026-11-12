@@ -1,6 +1,4 @@
 .meta/
-semantics/olist_dbt/target/
-semantics/olist_dbt/logs/
-semantics/olist_dbt/.user.yml
 tests/outputs/
 *.duckdb
+__pycache__/

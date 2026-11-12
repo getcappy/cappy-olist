@@ -2,10 +2,11 @@
 
 本项目的分析对象是 **Olist Brazilian E-Commerce** 公开数据集：2016-09 至 2018-10 期间巴西 Olist
 平台上约 10 万笔订单、9.6 万名客户、3 万件商品和 3 千家卖家的交易数据。数据仓库为 DuckDB，
-星型模型和 MetricFlow 语义层都在 `semantics/` 下，由 `cappy sync` 生成指标文档。
+星型模型用纯 SQL 构建（`sql/build_warehouse.sql`）；指标与维度以 **OKF（Open Knowledge Format
+v0.2）** 的 markdown 概念文件定义在 `semantics/` 下。
 
-回答业务问题时：**能用语义层指标就用语义层**，语义层覆盖不到再写 SQL。所有结论都要说明口径、
-时间范围和单位（金额均为巴西雷亚尔 BRL）。
+回答业务问题时：**先读对应指标概念文件，再按 `# Computation` 的官方 SQL 口径用 `execute_sql`
+计算**。不要临场发明指标口径；本项目未启用 dbt MetricFlow，`execute_semantic_query` 不可用。
 
 ## 一、数据架构
 
@@ -13,7 +14,7 @@
 9 个原始 CSV
   → raw_*        （原样落地，不要直接用于业务分析）
   → stg_*        （重命名、去重、类型规范）
-  → fct_* / dim_*（对外分析层，语义层只引用这一层）
+  → fct_* / dim_*（对外分析层，所有指标基于这一层）
 ```
 
 - 原始表：`raw_orders`、`raw_customers`、`raw_order_items`、`raw_payments`、`raw_reviews`、
@@ -51,61 +52,96 @@
 `fct_payments` 再 `sum(gmv)`，会把订单金额按明细行数放大。需要商品/支付维度时，用对应的
 `fct_order_items` / `fct_payments` 指标，或先在子查询里聚合到 `order_id` 再 join。
 
-## 三、关键指标口径（优先用语义层）
+## 三、语义模型（OKF）
 
-语义层 **29 个指标 / 26 个维度**，完整定义见 `semantics/metrics/*.md` 和 `semantics/dimensions.md`。
-用 `execute_semantic_query` 查询，例如：
+`semantics/` 是一个 OKF v0.2 知识包（markdown + YAML frontmatter，无外部 SDK）：
 
-```json
-{"metrics": ["gmv", "orders"], "group_by": ["order__customer_state"], "order_by": ["-gmv"], "limit": 10}
+```text
+semantics/
+├── index.md                  # 入口：29 个指标 / 13 个维度，按主题分组
+├── log.md                    # 变更记录
+├── metrics/<metric>.md       # type: Metric
+└── dimensions/<dimension>.md # type: Dimension
 ```
 
-| 业务问题 | 语义层指标 | 常用维度 |
+**指标文件**结构（每个文件一个概念）：
+
+```yaml
+---
+type: Metric
+title: "GMV"
+description: "Gross merchandise value: item prices plus freight, in BRL."
+tags: [revenue, orders]
+aliases: ["revenue", "营收", "销售额"]
+unit: BRL
+status: stable
+sources: [...]
+---
+# Definition     业务定义
+# Computation    官方 SQL 口径
+# Dimensions     可切分的维度（链接到 dimensions/*.md）
+# Notes          基线值、边界、常见坑
+# Related metrics 相关指标
+```
+
+**维度文件**包含 `# Definition`、`# SQL`（维度表达式）、`# Available in`（哪些表有这一列）和 `# Notes`。
+
+使用规则：
+
+1. 先读 `semantics/index.md`，或用 `grep -r "营收" semantics/`、`ls semantics/metrics` 找到指标文件；
+   文件名即指标名（如 `gmv.md`、`average-order-value.md`）。
+2. 读该文件的 `# Computation`，用 `execute_sql` 执行。可以改 `WHERE`、`GROUP BY`、时间范围，
+   **不要改聚合公式**（分子分母的定义）。
+3. 比率指标（客单价、延迟率、取消率、复购率、差评率）先聚合分子分母、再相除，**不要对已算好的
+   比率求平均**。
+4. 回答时说明指标名、口径、时间范围和单位；复购/差评等小样本指标要带上样本量。
+5. 语义层之外的问题（城市排名、评论文本、地理分布等）直接基于 `fct_*` / `dim_*` 写 SQL。
+
+## 四、关键指标与文件
+
+| 业务问题 | 指标文件 | 常用维度 |
 | --- | --- | --- |
-| 总 GMV / 商品收入 / 运费 | `gmv` / `merchandise_value` / `freight_value` | `metric_time__month`、`order__customer_state` |
-| 订单数 / 已送达 / 已取消 | `orders` / `delivered_orders` / `canceled_orders` | `metric_time__month`、`order__order_status` |
-| 客单价 | `average_order_value` | 州、月份、类目 |
-| 取消率 / 延迟率 | `cancellation_rate` / `late_delivery_rate` | 州、月份、卖家州 |
-| 平均交付时长 | `average_delivery_days` | 州、月份 |
-| 销量 / 商品收入 / 平均单价 | `items_sold` / `item_revenue` / `average_item_price` | `order_item__category_en`、`order_item__seller_state` |
-| 客户数 / 复购客户 / 复购率 | `customers` / `repeat_customers` / `repeat_customer_rate` | `customer__customer_state`、`customer__customer_type` |
-| 客户价值 | `average_customer_value` / `average_orders_per_customer` | `customer__first_order_ts` |
-| 支付金额 / 支付方式 | `payment_value` / `payment_transactions` / `average_payment_value` | `payment__payment_type`、`payment__installment_band` |
-| 评分 / 差评率 | `average_review_score` / `reviews` / `low_reviews` / `low_review_rate` | `review__review_score`、`review__order_status` |
-| 商品数 / 卖家数 | `catalog_products` / `sellers` | `product__category_en`、`seller__seller_state` |
+| 总 GMV / 商品收入 / 运费 | `gmv.md` / `merchandise-value.md` / `freight-value.md` | `date`、`customer-state` |
+| 订单数 / 已送达 / 已取消 | `orders.md` / `delivered-orders.md` / `canceled-orders.md` | `date`、`order-status`、`customer-state` |
+| 客单价 | `average-order-value.md` | `date`、`customer-state`、`order-status` |
+| 取消率 / 延迟率 | `cancellation-rate.md` / `late-delivery-rate.md` | `date`、`customer-state` |
+| 平均交付时长 | `average-delivery-days.md` | `date`、`customer-state` |
+| 销量 / 商品收入 / 平均单价 | `items-sold.md` / `item-revenue.md` / `average-item-price.md` | `category`、`seller-state`、`customer-state` |
+| 客户数 / 复购客户 / 复购率 | `customers.md` / `repeat-customers.md` / `repeat-customer-rate.md` | `customer-first-order-date`、`customer-state`、`customer-type` |
+| 客户价值 / 人均订单数 | `average-customer-value.md` / `average-orders-per-customer.md` | `customer-first-order-date`、`customer-type` |
+| 支付金额 / 支付笔数 / 平均支付 | `payment-value.md` / `payment-transactions.md` / `average-payment-value.md` | `payment-type`、`installment-band` |
+| 评分 / 差评率 | `average-review-score.md` / `low-reviews.md` / `low-review-rate.md` | `review-score`、`review-date`、`order-status` |
+| 商品数 / 卖家数 | `catalog-products.md` / `sellers.md` | `category`、`weight-band`、`seller-state` |
 
 指标口径要点：
 
 - `gmv = merchandise_value + freight_value`（商品价格 + 运费），不是支付金额。
-- `average_order_value = gmv / orders`，在任意切片下都由 MetricFlow 先聚合再相除，不要用 `avg(gmv)` 代替。
+- `average_order_value = gmv / orders`，在任意切片下都先聚合再相除。
 - `late_delivery_rate = late_orders / delivered_orders`，分母只含已送达订单。
 - `cancellation_rate = canceled_orders / orders`，分母是全部订单。
 - `repeat_customer_rate = repeat_customers / customers`，客户按 `customer_unique_id` 去重。
-- `average_review_score` 的分子分母只统计有评价的订单，空评分不计入。
-- 支付金额与 GMV 口径不同：全量支付合计约 16.01M，GMV 约 15.84M，差异来自分期/优惠/拆分支付，
+- `average_review_score` 只统计有评价的订单，空评分不计入。
+- 支付金额与 GMV 口径不同：全量支付合计约 16.01M，GMV 约 15.84M，差异来自分期/优惠/拆分支付；
   回答"收入"时默认用 `gmv`，并说明口径。
 
-语义层覆盖不到的问题（如按城市排名、评论文本、卖家发货时效、地理分布）再用 `execute_sql`，
-优先基于 `fct_*` / `dim_*` 写查询。
-
-## 四、时间口径
+## 五、时间口径
 
 - 数据范围：`2016-09-04` 至 `2018-10-17`（按 `purchase_ts`）。
 - 2016 年 9-12 月订单极少；**2018-09 与 2018-10 数据明显不完整**（2018-09 仅 16 单、2018-10 仅 4 单），
   做月度趋势时默认截止到 **2018-08**，并在结论中说明。
-- 时间维度统一用 `metric_time`（映射到 `purchase_ts` / `first_order_ts` / `review_creation_ts`），
-  粒度后缀：`__day`、`__week`、`__month`、`__quarter`、`__year`。
+- 订单类指标用 `DATE_TRUNC('month', purchase_ts)`；客户 cohort 用 `first_order_ts`；评价趋势用
+  `review_creation_ts`。
 - 时间戳为巴西当地时间，不做时区转换。
 
-## 五、分析流程
+## 六、分析流程
 
-1. **先判断问题属于哪个主题**：收入/订单、客户、商品/类目、卖家、支付、配送、评价。
-2. **优先查语义层**：确定指标名和维度名（见上表），用 `execute_semantic_query`；一次可查多个指标。
-3. **需要明细或语义层没有的切面**时，用 `execute_sql` 查 `fct_*` / `dim_*`，并遵守防重复计数规则。
-4. **回答时给出**：指标口径、时间范围、Top N 的排序依据；金额保留 2 位小数，比率用百分比。
-5. 数据量小、结论可能受样本影响时（如复购、差评），补充样本量（订单数/客户数）。
+1. **判断主题**：收入/订单、客户、商品/类目、卖家、支付、配送、评价。
+2. **找指标定义**：读 `semantics/index.md` 或对应 `semantics/metrics/<metric>.md`，确认口径、单位和基线。
+3. **写 SQL**：基于 `# Computation`，用 `execute_sql` 查询；维度按 `# Dimensions` 的链接查表达式。
+4. **检查粒度**：确认没有把订单表和明细表混在一起造成重复计数。
+5. **回答**：给出指标口径、时间范围、Top N 排序依据；金额 2 位小数，比率用百分比，小样本带样本量。
 
-## 六、已知数据坑
+## 七、已知数据坑
 
 - `raw_customers.customer_id` 是"每笔订单一个"的键，**统计客户必须用 `customer_unique_id`**。
 - 原始评价表一个订单可能有多条评价，`fct_reviews` 只保留最新一条；不要直接对 `raw_reviews` 求平均。

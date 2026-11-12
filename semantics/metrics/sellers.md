@@ -1,26 +1,45 @@
-# sellers
+---
+type: Metric
+title: "Sellers"
+description: "Number of sellers."
+tags: [seller]
+aliases: ["seller count", "卖家数", "商家数"]
+unit: sellers
+status: stable
+generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
+verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+sources:
+  - id: kaggle
+    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+    title: Brazilian E-Commerce Public Dataset by Olist
+  - id: dim-sellers
+    resource: ../../databases/type=duckdb/database=olist/schema=main/table=dim_sellers.md
+    title: dim_sellers table context
+---
 
-**Label:** Sellers  
-**Type:** simple  
-**Description:** Number of sellers.  
-**Semantic models:** `sellers`  
+# Definition
 
-## Dimensions
+Count of distinct sellers in `dim_sellers` (one row per `seller_id`).
 
-Group by or filter this metric with any of the dimensions below. `metric_time` accepts a granularity suffix: `metric_time__day`, `metric_time__week`, `metric_time__month`, `metric_time__quarter`, `metric_time__year`.
+# Computation
 
-- `metric_time`
-- `seller__first_seen_ts`
-- `seller__seller_state`
-
-## Query
-
-Over time:
-```json
-{"metrics": ["sellers"], "group_by": ["metric_time__month"], "order_by": ["metric_time__month"]}
+```sql
+SELECT COUNT(*) AS sellers
+FROM dim_sellers;
 ```
 
-Broken down, filtered and ranked (see `../README.md` for every parameter):
-```json
-{"metrics": ["sellers"], "group_by": ["seller__first_seen_ts"], "where": ["{{ Dimension('seller__first_seen_ts') }} IS NOT NULL"], "order_by": ["-sellers"], "limit": 10}
-```
+One row per seller.
+
+# Dimensions
+
+- [Seller state](/dimensions/seller-state.md)
+
+# Notes
+
+- Full-period baseline: 3,095 sellers.
+- Most sellers are based in SP (1,849).
+
+# Related metrics
+
+- [Catalog Products](/metrics/catalog-products.md)
+- [Items Sold](/metrics/items-sold.md)
