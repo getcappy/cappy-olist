@@ -1,110 +1,152 @@
 # Olist 数据集说明与口径字典
 
 来源：[Kaggle — Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)，
-数据由 Olist 于 2018 年公开，覆盖 2016-09 至 2018-10 的巴西电商交易。CSV 共 9 个文件、约 45 MB 压缩。
-本项目把原始 CSV 原样落地为 `raw_*` 表，再用纯 SQL（`sql/build_warehouse.sql`）构建 `stg_*` 和
-分析层 `fct_*` / `dim_*`。所有业务指标以 OKF v0.2 markdown 概念文件定义在 `semantics/metrics/`，
-由 cappy agent 读取后用 `execute_sql` 按 `# Computation` 的官方口径计算。
+数据由 Olist 于 2018 年公开，覆盖 2016-09 至 2018-10 的巴西电商交易。
 
-## 1. 原始文件
+本项目**不做数据处理**：9 个 CSV 原样导入 DuckDB，表名和列名与 CSV 完全一致；没有视图、聚合、
+去重或派生列。指标以 OKF v0.2 markdown 概念文件定义在 `semantics/`，由 cappy agent 读取后
+用 `execute_sql` 在原始表上计算。
 
-| CSV | 行数 | 含义 | 本项目目标表 |
-| --- | ---: | --- | --- |
-| `olist_orders_dataset.csv` | 99,441 | 订单主表：状态与各环节时间戳 | `raw_orders` → `fct_orders` |
-| `olist_customers_dataset.csv` | 99,441 | 订单对应的客户与地址 | `raw_customers` → `dim_customers` |
-| `olist_order_items_dataset.csv` | 112,650 | 订单商品行：价格、运费、卖家 | `raw_order_items` → `fct_order_items` |
-| `olist_order_payments_dataset.csv` | 103,886 | 支付流水：方式、分期、金额 | `raw_payments` → `fct_payments` |
-| `olist_order_reviews_dataset.csv` | 99,224 | 评价：分数、评论、回复时间 | `raw_reviews` → `fct_reviews` |
-| `olist_products_dataset.csv` | 32,951 | 商品：类目、重量尺寸、图片数 | `raw_products` → `dim_products` |
-| `olist_sellers_dataset.csv` | 3,095 | 卖家与地址 | `raw_sellers` → `dim_sellers` |
-| `product_category_name_translation.csv` | 71 | 葡语类目 → 英语类目 | `raw_category_translation` |
-| `olist_geolocation_dataset.csv` | 1,000,163 | 邮编前缀的经纬度 | `raw_geolocation` → `dim_geolocation` |
+## 1. 原始文件 → DuckDB 表
 
-## 2. 分析层字段
+| CSV | 行数 | DuckDB 表 |
+| --- | ---: | --- |
+| `olist_orders_dataset.csv` | 99,441 | `olist_orders_dataset` |
+| `olist_customers_dataset.csv` | 99,441 | `olist_customers_dataset` |
+| `olist_order_items_dataset.csv` | 112,650 | `olist_order_items_dataset` |
+| `olist_order_payments_dataset.csv` | 103,886 | `olist_order_payments_dataset` |
+| `olist_order_reviews_dataset.csv` | 99,224 | `olist_order_reviews_dataset` |
+| `olist_products_dataset.csv` | 32,951 | `olist_products_dataset` |
+| `olist_sellers_dataset.csv` | 3,095 | `olist_sellers_dataset` |
+| `product_category_name_translation.csv` | 71 | `product_category_name_translation` |
+| `olist_geolocation_dataset.csv` | 1,000,163 | `olist_geolocation_dataset` |
 
-### fct_orders（订单粒度，99,441 行）
+本地数据目录：
 
-| 字段 | 类型 | 口径 |
-| --- | --- | --- |
-| `order_id` | string | 订单唯一键 |
-| `customer_unique_id` | string | 客户唯一键（跨订单稳定） |
-| `order_status` | string | delivered / shipped / canceled / unavailable / invoiced / processing / created / approved |
-| `customer_state` | string | 客户所在州（两位缩写） |
-| `purchase_ts` | timestamp | 下单时间 |
-| `approved_ts` | timestamp | 支付批准时间（160 单为空） |
-| `delivered_customer_ts` | timestamp | 送达客户时间（2,965 单为空） |
-| `estimated_delivery_ts` | timestamp | 预计送达时间 |
-| `item_count` | int | 商品行数 |
-| `seller_count` | int | 涉及卖家数 |
-| `merchandise_value` | decimal | 商品价格合计（不含运费） |
-| `freight_value` | decimal | 运费合计 |
-| `gmv` | decimal | `merchandise_value + freight_value` |
-| `payment_value` | decimal | 支付流水合计 |
-| `max_installments` | int | 最大分期数 |
-| `review_score` | int | 最新评价分数（1-5，未评价为空） |
-| `delivery_days` | int | 下单到送达的天数（仅已送达） |
-| `is_late` | boolean | 已送达且晚于预计送达时间 |
-| `is_delivered` | boolean | `order_status = 'delivered'` |
-| `is_canceled` | boolean | `order_status = 'canceled'` |
-| `has_items` | boolean | 是否有商品明细 |
+```text
+olist-data/
+├── source/brazilian-ecommerce-kaggle.zip   # Kaggle 原始压缩包
+├── raw/*.csv                               # 9 个原始 CSV
+├── SHA256SUMS                              # 压缩包 + CSV 校验和
+└── olist.duckdb                            # 只有 9 张原始表
+```
 
-### fct_order_items（订单商品粒度，112,650 行）
+## 2. 表结构与粒度
 
-`order_id`、`order_item_id`、`product_id`、`seller_id`、`customer_unique_id`、`customer_state`、
-`purchase_ts`、`order_status`、`category_pt`、`category_en`、`seller_state`、`shipping_limit_ts`、
-`item_price`、`freight_value`、`item_total = item_price + freight_value`。
+### olist_orders_dataset（99,441 行，一行一单）
 
-### fct_payments（支付流水粒度，103,886 行）
+`order_id`、`customer_id`、`order_status`、`order_purchase_timestamp`、`order_approved_at`、
+`order_delivered_carrier_date`、`order_delivered_customer_date`、`order_estimated_delivery_date`。
 
-`order_id`、`payment_sequential`、`payment_type`、`installments`、`payment_value`、
-`customer_unique_id`、`customer_state`、`purchase_ts`、`order_status`、`installment_band`。
+- `order_status`：delivered / shipped / canceled / unavailable / invoiced / processing / created / approved。
+- `order_approved_at` 160 行为空，`order_delivered_customer_date` 2,965 行为空。
 
-### fct_reviews（订单评价粒度，98,673 行）
+### olist_customers_dataset（99,441 行，一行一个订单客户）
+
+`customer_id`、`customer_unique_id`、`customer_zip_code_prefix`、`customer_city`、`customer_state`。
+
+- `customer_id` 是每单一个的键；客户唯一键是 `customer_unique_id`（96,096 个）。
+
+### olist_order_items_dataset（112,650 行，一行一个订单商品）
+
+`order_id`、`order_item_id`、`product_id`、`seller_id`、`shipping_limit_date`、`price`、`freight_value`。
+
+- 订单金额 = 同一 `order_id` 下 `SUM(price + freight_value)`。
+- 1,603 行商品无法匹配到类目。
+
+### olist_order_payments_dataset（103,886 行，一行一笔支付）
+
+`order_id`、`payment_sequential`、`payment_type`、`payment_installments`、`payment_value`。
+
+- 一个订单可能有多笔支付；按订单汇总前先 `SUM(payment_value) GROUP BY order_id`。
+
+### olist_order_reviews_dataset（99,224 行，一行一条评价）
 
 `review_id`、`order_id`、`review_score`、`review_comment_title`、`review_comment_message`、
-`review_creation_ts`、`review_answer_ts`、`response_hours`、`customer_unique_id`、`customer_state`、
-`purchase_ts`、`order_status`。每个订单保留 `review_answer_timestamp` 最新的一条评价。
+`review_creation_date`、`review_answer_timestamp`。
 
-### 维度表
+- 同一 `order_id` 可能有多条评价；计算评分前按订单去重，保留 `review_answer_timestamp` 最新的一条。
+- 去重后 98,673 个订单有评价；768 个订单没有评价。
 
-- `dim_customers`（96,096 行）：`customer_unique_id`、`customer_state`、`customer_city`、`first_order_ts`、
-  `last_order_ts`、`order_count`、`delivered_order_count`、`total_gmv`、`avg_review_score`、`is_repeat_customer`。
-- `dim_products`（32,951 行）：`product_id`、`category_pt`、`category_en`、`name_length`、`description_length`、
-  `photos_qty`、`weight_g`、`volume_cm3`、`first_seen_ts`、`weight_band`。
-- `dim_sellers`（3,095 行）：`seller_id`、`seller_state`、`seller_city`、`zip_code_prefix`、`first_seen_ts`。
-- `dim_geolocation`（19,015 行）：`zip_code_prefix`、`city`、`state`、`lat`、`lng`（按邮编取平均坐标）。
+### olist_products_dataset（32,951 行，一行一个商品）
 
-## 3. 指标定义
+`product_id`、`product_category_name`、`product_name_lenght`、`product_description_lenght`、
+`product_photos_qty`、`product_weight_g`、`product_length_cm`、`product_height_cm`、`product_width_cm`。
 
-| 指标 | 公式 | 说明 |
-| --- | --- | --- |
-| `gmv` | `Σ(merchandise_value + freight_value)` | 成交总额，含运费 |
-| `merchandise_value` | `Σ merchandise_value` | 商品收入，不含运费 |
-| `freight_value` | `Σ freight_value` | 运费收入 |
-| `orders` | `Σ 1` | 订单数（订单粒度） |
-| `delivered_orders` | `Σ is_delivered` | 已送达订单数 |
-| `canceled_orders` | `Σ is_canceled` | 已取消订单数 |
-| `average_order_value` | `gmv / orders` | 客单价 |
-| `late_orders` | `Σ is_late` | 延迟送达订单数 |
-| `late_delivery_rate` | `late_orders / delivered_orders` | 延迟率 |
-| `cancellation_rate` | `canceled_orders / orders` | 取消率 |
-| `average_delivery_days` | `avg(delivery_days)` | 平均交付天数（已送达） |
-| `items_sold` | `Σ 1`（商品行） | 销量 |
-| `item_revenue` | `Σ item_price` | 商品行收入 |
-| `average_item_price` | `item_revenue / items_sold` | 平均商品单价 |
-| `customers` | `Σ 1`（客户维度） | 客户数 |
-| `repeat_customers` | `Σ is_repeat_customer` | 复购客户数 |
-| `repeat_customer_rate` | `repeat_customers / customers` | 复购率 |
-| `average_customer_value` | `avg(total_gmv)` | 客户平均终身价值 |
-| `payment_value` | `Σ payment_value` | 支付金额 |
-| `average_payment_value` | `payment_value / payment_transactions` | 平均单笔支付 |
-| `average_review_score` | `avg(review_score)` | 平均评分 |
-| `low_reviews` | `Σ(review_score ≤ 2)` | 差评数 |
-| `low_review_rate` | `low_reviews / reviews` | 差评率 |
-| `catalog_products` | `Σ 1`（商品维度） | 在售商品数 |
-| `sellers` | `Σ 1`（卖家维度） | 卖家数 |
+- 列名保留源文件拼写（`lenght`）。
+- 610 个商品没有类目。
 
-## 4. 全量基线（2016-09-04 至 2018-10-17）
+### olist_sellers_dataset（3,095 行，一行一个卖家）
+
+`seller_id`、`seller_zip_code_prefix`、`seller_city`、`seller_state`。
+
+### product_category_name_translation（71 行，一行一个类目）
+
+`product_category_name`、`product_category_name_english`。
+
+### olist_geolocation_dataset（1,000,163 行，一行一条邮编坐标）
+
+`geolocation_zip_code_prefix`、`geolocation_lat`、`geolocation_lng`、`geolocation_city`、`geolocation_state`。
+
+- 同一邮编有多条记录；地图分析前先按邮编聚合经纬度，城市/州仅作标签参考。
+
+## 3. 关联与去重
+
+| 关系 | 关联键 | 基数 | 注意 |
+| --- | --- | --- | --- |
+| 订单 ↔ 客户 | `customer_id` | 多对一 | 客户唯一键用 `customer_unique_id` |
+| 订单 ↔ 商品 | `order_id` | 一对多 | 先聚合到 `order_id` |
+| 订单 ↔ 支付 | `order_id` | 一对多 | 先聚合到 `order_id` |
+| 订单 ↔ 评价 | `order_id` | 一对多 | 先按订单去重 |
+| 商品明细 ↔ 商品 | `product_id` | 多对一 | |
+| 商品明细 ↔ 卖家 | `seller_id` | 多对一 | |
+| 商品 ↔ 类目翻译 | `product_category_name` | 多对一 | |
+| 客户/卖家 ↔ 地理 | 邮编前缀 | 一对多 | 先按邮编聚合 |
+
+核心规则：
+
+1. 商品和支付表先各自聚合到 `order_id`，再 join 订单。
+2. 评价先按 `order_id` 去重，再算平均分/评价数。
+3. 客户数用 `COUNT(DISTINCT customer_unique_id)`。
+4. 不要同时 join 商品和支付两个一对多表后求和。
+
+## 4. 指标公式
+
+| 指标 | 原始表口径 |
+| --- | --- |
+| `gmv` | `SUM(price + freight_value)`，先按 `order_id` 聚合；无商品订单为 0 |
+| `merchandise_value` | `SUM(price)` |
+| `freight_value` | `SUM(freight_value)` |
+| `orders` | `COUNT(*)` on orders |
+| `delivered_orders` | `COUNT(*) WHERE order_status = 'delivered'` |
+| `canceled_orders` | `COUNT(*) WHERE order_status = 'canceled'` |
+| `average_order_value` | `gmv / orders`，先聚合再相除 |
+| `late_orders` | 已送达且 `order_delivered_customer_date > order_estimated_delivery_date` |
+| `late_delivery_rate` | `late_orders / delivered_orders` |
+| `cancellation_rate` | `canceled_orders / orders` |
+| `average_delivery_days` | `AVG(DATE_DIFF('day', purchase, delivered))`，仅已送达 |
+| `items_sold` | `COUNT(*)` on order items |
+| `item_revenue` | `SUM(price)` on order items |
+| `item_freight` | `SUM(freight_value)` on order items |
+| `average_item_price` | `item_revenue / items_sold` |
+| `customers` | `COUNT(DISTINCT customer_unique_id)` |
+| `repeat_customers` | 订单数 > 1 的 `customer_unique_id` 数 |
+| `repeat_customer_rate` | `repeat_customers / customers` |
+| `average_customer_value` | 每个客户终身 GMV 的平均值 |
+| `average_orders_per_customer` | 订单总数 / 客户数 |
+| `payment_value` | `SUM(payment_value)` |
+| `payment_transactions` | `COUNT(*)` on payments |
+| `average_payment_value` | `payment_value / payment_transactions` |
+| `average_review_score` | 去重后 `AVG(review_score)` |
+| `reviews` | 去重后评价数 |
+| `low_reviews` | 去重后 `review_score <= 2` 的数量 |
+| `low_review_rate` | `low_reviews / reviews` |
+| `catalog_products` | `COUNT(*)` on products |
+| `sellers` | `COUNT(*)` on sellers |
+
+每个指标的完整 SQL 见 `semantics/metrics/<metric>.md` 的 `# Computation`。
+
+## 5. 全量基线（2016-09-04 至 2018-10-17）
 
 | 指标 | 值 |
 | --- | ---: |
@@ -127,9 +169,9 @@
 
 > 复购率低是该数据集的真实特征（Olist 平台以一次性购买为主），不是查询错误。
 
-## 5. 语义模型与复现步骤
+## 6. 语义模型与复现
 
-指标定义在 `semantics/`（OKF v0.2 知识包）：
+`semantics/` 是 OKF v0.2 知识包：
 
 ```text
 semantics/index.md              29 个指标 / 13 个维度，入口
@@ -144,15 +186,11 @@ semantics/log.md                变更记录
 # 1. 下载并解压 Kaggle 数据到 ../olist-data/raw
 python scripts/load_olist.py
 
-# 2. 构建纯 SQL 星型模型（stg_* / fct_* / dim_* 视图）
-python scripts/build_marts.py
-
-# 3. 校验 OKF 知识包（frontmatter 与内部链接）
+# 2. 校验 OKF 知识包（frontmatter 与内部链接）
 python scripts/validate_okf.py
 
-# 4. 重新生成 cappy 表文档
+# 3. 重新生成 cappy 表文档
 cappy sync
 ```
 
-不需要 dbt、MetricFlow 或 `semantic_manifest.json`；`semantics/` 下只有 markdown 概念文件，
-可以直接用 Git 审阅和 diff。
+不需要 dbt、MetricFlow、`semantic_manifest.json` 或任何视图；`semantics/` 下只有 markdown 概念文件。

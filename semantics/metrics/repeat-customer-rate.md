@@ -1,20 +1,30 @@
 ---
 type: Metric
-title: "Repeat customer rate"
-description: "Repeat customers divided by all customers."
-tags: [customer]
-aliases: ["复购率", "回购率"]
+title: Repeat customer rate
+description: Repeat customers divided by all customers.
+tags:
+- customer
+aliases:
+- 复购率
+- 回购率
 unit: ratio
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: dim-customers
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=dim_customers.md
-    title: dim_customers table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-customers-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_customers_dataset.md
+  title: olist_customers_dataset table context
+- id: olist-orders-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_orders_dataset.md
+  title: olist_orders_dataset table context
 ---
 
 # Definition
@@ -24,13 +34,19 @@ sources:
 # Computation
 
 ```sql
+WITH customer_orders AS (
+    SELECT c.customer_unique_id, COUNT(*) AS order_count
+    FROM olist_customers_dataset AS c
+    JOIN olist_orders_dataset AS o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_unique_id
+)
 SELECT
-    SUM(CASE WHEN is_repeat_customer THEN 1 ELSE 0 END)
-    / NULLIF(COUNT(*), 0) AS repeat_customer_rate
-FROM dim_customers;
+    SUM(CASE WHEN order_count > 1 THEN 1 ELSE 0 END)
+    / NULLIF((SELECT COUNT(DISTINCT customer_unique_id) FROM olist_customers_dataset), 0) AS repeat_customer_rate
+FROM customer_orders;
 ```
 
-One row per customer.
+Denominator is all distinct `customer_unique_id` values in `olist_customers_dataset` (96,096).
 
 # Dimensions
 

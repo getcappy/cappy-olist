@@ -2,14 +2,22 @@
 type: Dimension
 title: Payment type
 description: Payment method used for a transaction.
-tags: [payment]
+tags:
+- payment
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-payments-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_payments_dataset.md
+  title: olist_order_payments_dataset table context
 ---
 
 # Definition
@@ -24,8 +32,8 @@ payment_type
 
 # Available in
 
-- [fct_payments](../../databases/type=duckdb/database=olist/schema=main/table=fct_payments.md)
+- [olist_order_payments_dataset](../../databases/type=duckdb/database=olist/schema=main/table=olist_order_payments_dataset.md)
 
 # Notes
 
-- An order can have several payment rows (card + voucher, split payments). Sum payment values, do not join to orders and count rows.
+- An order can have several payment rows (card + voucher, split payments). Sum payment values per order instead of counting rows joined to orders.

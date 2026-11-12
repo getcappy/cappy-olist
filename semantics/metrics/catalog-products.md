@@ -1,31 +1,38 @@
 ---
 type: Metric
-title: "Catalogue products"
-description: "Number of products in the catalogue."
-tags: [product]
-aliases: ["product count", "SKU count", "商品数"]
+title: Catalogue products
+description: Number of products in the catalogue.
+tags:
+- product
+aliases:
+- product count
+- SKU count
+- 商品数
 unit: products
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: dim-products
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=dim_products.md
-    title: dim_products table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-products-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_products_dataset.md
+  title: olist_products_dataset table context
 ---
 
 # Definition
 
-Count of distinct products in `dim_products` (one row per `product_id`).
+Count of distinct products in `olist_products_dataset` (one row per `product_id`).
 
 # Computation
 
 ```sql
-SELECT COUNT(*) AS catalog_products
-FROM dim_products;
+SELECT COUNT(*) AS catalog_products FROM olist_products_dataset;
 ```
 
 One row per product.

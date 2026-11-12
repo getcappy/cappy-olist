@@ -2,14 +2,22 @@
 type: Dimension
 title: Review score
 description: Customer review score from 1 to 5.
-tags: [review]
+tags:
+- review
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-reviews-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_reviews_dataset.md
+  title: olist_order_reviews_dataset table context
 ---
 
 # Definition
@@ -24,9 +32,9 @@ CAST(review_score AS VARCHAR) AS review_score
 
 # Available in
 
-- [fct_reviews](../../databases/type=duckdb/database=olist/schema=main/table=fct_reviews.md)
+- [olist_order_reviews_dataset](../../databases/type=duckdb/database=olist/schema=main/table=olist_order_reviews_dataset.md)
 
 # Notes
 
-- 768 orders have no review; they are not in `fct_reviews`.
-- Low reviews are scores 1-2.
+- 768 orders have no review; they are not in `olist_order_reviews_dataset`.
+- Deduplicate to the latest review per order before aggregating; low reviews are scores 1-2.

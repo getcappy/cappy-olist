@@ -1,8 +1,14 @@
 name: average_order_value
 prompt: 全站客单价（AOV）是多少？
 sql: |
-  SELECT round(SUM(gmv) / COUNT(*), 2) AS average_order_value
-  FROM fct_orders
+  WITH order_gmv AS (
+    SELECT o.order_id, COALESCE(SUM(i.price + i.freight_value), 0) AS gmv
+    FROM olist_orders_dataset o
+    LEFT JOIN olist_order_items_dataset i ON o.order_id = i.order_id
+    GROUP BY o.order_id
+  )
+  SELECT round(SUM(gmv) / (SELECT COUNT(*) FROM olist_orders_dataset), 2) AS average_order_value
+  FROM order_gmv
 assertions:
   - type: tool_call
     tool: execute_sql

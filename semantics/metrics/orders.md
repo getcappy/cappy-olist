@@ -1,20 +1,28 @@
 ---
 type: Metric
-title: "Orders"
-description: "Number of orders placed."
-tags: [orders]
-aliases: ["order count", "订单量", "订单数"]
+title: Orders
+description: Number of orders placed.
+tags:
+- orders
+aliases:
+- order count
+- 订单量
+- 订单数
 unit: orders
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-orders
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_orders.md
-    title: fct_orders table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-orders-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_orders_dataset.md
+  title: olist_orders_dataset table context
 ---
 
 # Definition
@@ -24,8 +32,7 @@ Count of orders, one per `order_id`, including canceled and undelivered orders.
 # Computation
 
 ```sql
-SELECT COUNT(*) AS orders
-FROM fct_orders;
+SELECT COUNT(*) AS orders FROM olist_orders_dataset;
 ```
 
 One row per order.

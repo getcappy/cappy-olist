@@ -1,11 +1,18 @@
 name: repeat_customer_rate
 prompt: 复购客户占比是多少？复购客户有多少人？
 sql: |
+  WITH customer_orders AS (
+    SELECT c.customer_unique_id, COUNT(*) AS order_count
+    FROM olist_customers_dataset c
+    JOIN olist_orders_dataset o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_unique_id
+  )
   SELECT
-    round(100.0 * SUM(CASE WHEN is_repeat_customer THEN 1 ELSE 0 END) / COUNT(*), 2) AS repeat_customer_rate_pct,
-    SUM(CASE WHEN is_repeat_customer THEN 1 ELSE 0 END) AS repeat_customers,
-    COUNT(*) AS customers
-  FROM dim_customers
+    round(100.0 * SUM(CASE WHEN order_count > 1 THEN 1 ELSE 0 END)
+          / (SELECT COUNT(DISTINCT customer_unique_id) FROM olist_customers_dataset), 2) AS repeat_customer_rate_pct,
+    SUM(CASE WHEN order_count > 1 THEN 1 ELSE 0 END) AS repeat_customers,
+    (SELECT COUNT(DISTINCT customer_unique_id) FROM olist_customers_dataset) AS customers
+  FROM customer_orders
 assertions:
   - type: tool_call
     tool: execute_sql

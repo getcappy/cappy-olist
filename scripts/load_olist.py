@@ -17,7 +17,7 @@ from pathlib import Path
 import duckdb
 
 RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
-    "raw_orders": (
+    "olist_orders_dataset": (
         "olist_orders_dataset.csv",
         {
             "order_id": "VARCHAR",
@@ -30,7 +30,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "order_estimated_delivery_date": "TIMESTAMP",
         },
     ),
-    "raw_customers": (
+    "olist_customers_dataset": (
         "olist_customers_dataset.csv",
         {
             "customer_id": "VARCHAR",
@@ -40,7 +40,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "customer_state": "VARCHAR",
         },
     ),
-    "raw_order_items": (
+    "olist_order_items_dataset": (
         "olist_order_items_dataset.csv",
         {
             "order_id": "VARCHAR",
@@ -52,7 +52,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "freight_value": "DECIMAL(12,2)",
         },
     ),
-    "raw_payments": (
+    "olist_order_payments_dataset": (
         "olist_order_payments_dataset.csv",
         {
             "order_id": "VARCHAR",
@@ -62,7 +62,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "payment_value": "DECIMAL(12,2)",
         },
     ),
-    "raw_reviews": (
+    "olist_order_reviews_dataset": (
         "olist_order_reviews_dataset.csv",
         {
             "review_id": "VARCHAR",
@@ -74,7 +74,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "review_answer_timestamp": "TIMESTAMP",
         },
     ),
-    "raw_products": (
+    "olist_products_dataset": (
         "olist_products_dataset.csv",
         {
             "product_id": "VARCHAR",
@@ -88,7 +88,7 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "product_width_cm": "INTEGER",
         },
     ),
-    "raw_sellers": (
+    "olist_sellers_dataset": (
         "olist_sellers_dataset.csv",
         {
             "seller_id": "VARCHAR",
@@ -97,14 +97,14 @@ RAW_TABLES: dict[str, tuple[str, dict[str, str]]] = {
             "seller_state": "VARCHAR",
         },
     ),
-    "raw_category_translation": (
+    "product_category_name_translation": (
         "product_category_name_translation.csv",
         {
             "product_category_name": "VARCHAR",
             "product_category_name_english": "VARCHAR",
         },
     ),
-    "raw_geolocation": (
+    "olist_geolocation_dataset": (
         "olist_geolocation_dataset.csv",
         {
             "geolocation_zip_code_prefix": "VARCHAR",

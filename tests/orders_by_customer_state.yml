@@ -1,9 +1,16 @@
 name: orders_by_customer_state
 prompt: 订单数最多的 5 个州是哪些？给出订单数和 GMV。
 sql: |
-  SELECT customer_state, COUNT(*) AS orders, round(SUM(gmv), 2) AS gmv
-  FROM fct_orders
-  GROUP BY customer_state
+  WITH order_gmv AS (
+    SELECT o.order_id, o.customer_id, COALESCE(SUM(i.price + i.freight_value), 0) AS gmv
+    FROM olist_orders_dataset o
+    LEFT JOIN olist_order_items_dataset i ON o.order_id = i.order_id
+    GROUP BY o.order_id, o.customer_id
+  )
+  SELECT c.customer_state, COUNT(*) AS orders, round(SUM(og.gmv), 2) AS gmv
+  FROM order_gmv og
+  JOIN olist_customers_dataset c ON og.customer_id = c.customer_id
+  GROUP BY c.customer_state
   ORDER BY orders DESC
   LIMIT 5
 assertions:

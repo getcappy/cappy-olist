@@ -1,20 +1,29 @@
 ---
 type: Metric
-title: "Item revenue"
-description: "Item prices excluding freight."
-tags: [revenue, product]
-aliases: ["product revenue", "类目收入", "商品行收入"]
+title: Item revenue
+description: Item prices excluding freight.
+tags:
+- revenue
+- product
+aliases:
+- product revenue
+- 类目收入
+- 商品行收入
 unit: BRL
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-order-items
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_order_items.md
-    title: fct_order_items table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-items-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_items_dataset.md
+  title: olist_order_items_dataset table context
 ---
 
 # Definition
@@ -24,8 +33,7 @@ Sum of `item_price` over order items, excluding freight. Use it for category, se
 # Computation
 
 ```sql
-SELECT SUM(item_price) AS item_revenue
-FROM fct_order_items;
+SELECT SUM(price) AS item_revenue FROM olist_order_items_dataset;
 ```
 
 One row per order item.

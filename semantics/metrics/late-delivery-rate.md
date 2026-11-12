@@ -1,20 +1,28 @@
 ---
 type: Metric
-title: "Late delivery rate"
-description: "Late delivered orders divided by delivered orders."
-tags: [delivery]
-aliases: ["delay rate", "延迟率", "延迟交付率"]
+title: Late delivery rate
+description: Late delivered orders divided by delivered orders.
+tags:
+- delivery
+aliases:
+- delay rate
+- 延迟率
+- 延迟交付率
 unit: ratio
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-orders
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_orders.md
-    title: fct_orders table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-orders-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_orders_dataset.md
+  title: olist_orders_dataset table context
 ---
 
 # Definition
@@ -25,9 +33,11 @@ sources:
 
 ```sql
 SELECT
-    SUM(CASE WHEN is_late THEN 1 ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN is_delivered THEN 1 ELSE 0 END), 0) AS late_delivery_rate
-FROM fct_orders;
+    SUM(CASE WHEN order_status = 'delivered'
+              AND order_delivered_customer_date > order_estimated_delivery_date
+             THEN 1 ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN order_status = 'delivered' THEN 1 ELSE 0 END), 0) AS late_delivery_rate
+FROM olist_orders_dataset;
 ```
 
 One row per order; aggregate the numerator and denominator before dividing.

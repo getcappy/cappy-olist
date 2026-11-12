@@ -1,20 +1,30 @@
 ---
 type: Metric
-title: "Repeat customers"
-description: "Customers with more than one order."
-tags: [customer]
-aliases: ["returning customers", "复购客户"]
+title: Repeat customers
+description: Customers with more than one order.
+tags:
+- customer
+aliases:
+- returning customers
+- 复购客户
 unit: customers
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: dim-customers
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=dim_customers.md
-    title: dim_customers table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-customers-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_customers_dataset.md
+  title: olist_customers_dataset table context
+- id: olist-orders-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_orders_dataset.md
+  title: olist_orders_dataset table context
 ---
 
 # Definition
@@ -24,11 +34,16 @@ Count of customers whose `order_count > 1`.
 # Computation
 
 ```sql
-SELECT SUM(CASE WHEN is_repeat_customer THEN 1 ELSE 0 END) AS repeat_customers
-FROM dim_customers;
+WITH customer_orders AS (
+    SELECT c.customer_unique_id, COUNT(*) AS order_count
+    FROM olist_customers_dataset AS c
+    JOIN olist_orders_dataset AS o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_unique_id
+)
+SELECT COUNT(*) AS repeat_customers FROM customer_orders WHERE order_count > 1;
 ```
 
-One row per customer.
+Join `olist_customers_dataset` to `olist_orders_dataset` on `customer_id`, count orders per `customer_unique_id`, keep those with more than one.
 
 # Dimensions
 

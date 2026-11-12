@@ -1,20 +1,27 @@
 ---
 type: Metric
-title: "Payment transactions"
-description: "Number of payment transactions."
-tags: [payment]
-aliases: ["payment count", "支付笔数"]
+title: Payment transactions
+description: Number of payment transactions.
+tags:
+- payment
+aliases:
+- payment count
+- 支付笔数
 unit: transactions
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-payments
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_payments.md
-    title: fct_payments table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-payments-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_payments_dataset.md
+  title: olist_order_payments_dataset table context
 ---
 
 # Definition
@@ -24,8 +31,7 @@ Count of payment transaction rows (`order_id + payment_sequential`).
 # Computation
 
 ```sql
-SELECT COUNT(*) AS payment_transactions
-FROM fct_payments;
+SELECT COUNT(*) AS payment_transactions FROM olist_order_payments_dataset;
 ```
 
 One row per payment transaction.

@@ -9,6 +9,21 @@ concept with a sanctioned SQL computation; each dimension is one concept describ
 slice it. Read the metric before writing SQL, and compute it with `execute_sql` on the
 `olist` DuckDB database.
 
+# Data
+
+All computations read these 9 raw tables directly. Table names and columns match the Kaggle CSVs;
+there are no views or derived tables.
+
+* [olist_orders_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_orders_dataset.md) - one row per order
+* [olist_customers_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_customers_dataset.md) - one row per order-customer
+* [olist_order_items_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_order_items_dataset.md) - one row per order item
+* [olist_order_payments_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_order_payments_dataset.md) - one row per payment
+* [olist_order_reviews_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_order_reviews_dataset.md) - one row per review
+* [olist_products_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_products_dataset.md) - one row per product
+* [olist_sellers_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_sellers_dataset.md) - one row per seller
+* [product_category_name_translation](../databases/type=duckdb/database=olist/schema=main/table=product_category_name_translation.md) - Portuguese to English category names
+* [olist_geolocation_dataset](../databases/type=duckdb/database=olist/schema=main/table=olist_geolocation_dataset.md) - one row per postal-code coordinate
+
 # Metrics
 
 ## Revenue & orders

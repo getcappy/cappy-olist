@@ -1,20 +1,29 @@
 ---
 type: Metric
-title: "Freight value"
-description: "Freight charged to customers, in BRL."
-tags: [revenue, logistics]
-aliases: ["shipping revenue", "运费", "运费收入"]
+title: Freight value
+description: Freight charged to customers, in BRL.
+tags:
+- revenue
+- logistics
+aliases:
+- shipping revenue
+- 运费
+- 运费收入
 unit: BRL
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-orders
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_orders.md
-    title: fct_orders table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-items-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_items_dataset.md
+  title: olist_order_items_dataset table context
 ---
 
 # Definition
@@ -24,8 +33,7 @@ Sum of freight charged on order items.
 # Computation
 
 ```sql
-SELECT SUM(freight_value) AS freight_value
-FROM fct_orders;
+SELECT SUM(freight_value) AS freight_value FROM olist_order_items_dataset;
 ```
 
 One row per order.

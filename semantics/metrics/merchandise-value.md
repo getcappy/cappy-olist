@@ -1,20 +1,29 @@
 ---
 type: Metric
-title: "Merchandise value"
-description: "Item prices excluding freight, in BRL."
-tags: [revenue]
-aliases: ["product revenue", "item revenue", "商品收入", "商品销售额"]
+title: Merchandise value
+description: Item prices excluding freight, in BRL.
+tags:
+- revenue
+aliases:
+- product revenue
+- item revenue
+- 商品收入
+- 商品销售额
 unit: BRL
 status: stable
-generated: { by: dsh-agent/deepseek-flash, at: 2026-11-12T09:55:00Z }
-verified: { by: process:olist-baseline-check, at: 2026-11-12T09:55:00Z }
+generated:
+  by: dsh-agent/deepseek-flash
+  at: '2026-11-12T12:30:00Z'
+verified:
+  by: process:olist-raw-baseline-check
+  at: '2026-11-12T12:30:00Z'
 sources:
-  - id: kaggle
-    resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
-    title: Brazilian E-Commerce Public Dataset by Olist
-  - id: fct-orders
-    resource: ../../databases/type=duckdb/database=olist/schema=main/table=fct_orders.md
-    title: fct_orders table context
+- id: kaggle
+  resource: https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
+  title: Brazilian E-Commerce Public Dataset by Olist
+- id: olist-order-items-dataset
+  resource: ../../databases/type=duckdb/database=olist/schema=main/table=olist_order_items_dataset.md
+  title: olist_order_items_dataset table context
 ---
 
 # Definition
@@ -24,8 +33,7 @@ Sum of item prices (`merchandise_value`), excluding freight.
 # Computation
 
 ```sql
-SELECT SUM(merchandise_value) AS merchandise_value
-FROM fct_orders;
+SELECT SUM(price) AS merchandise_value FROM olist_order_items_dataset;
 ```
 
 One row per order; `merchandise_value` is already aggregated to order grain.
@@ -40,7 +48,7 @@ One row per order; `merchandise_value` is already aggregated to order grain.
 # Notes
 
 - Full-period baseline: 13,591,643.70 BRL.
-- For category-level merchandise revenue use `item-revenue` on `fct_order_items`.
+- For category-level merchandise revenue use `item-revenue` on `olist_order_items_dataset`.
 
 # Related metrics
 

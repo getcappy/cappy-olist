@@ -5,8 +5,8 @@ databases:
 - type: duckdb
   name: olist
   include:
-  - main.fct_*
-  - main.dim_*
+  - main.olist_*
+  - main.product_category_name_translation
   exclude: []
   allow_listed_only: false
   templates:
