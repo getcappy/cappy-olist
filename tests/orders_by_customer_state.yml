@@ -1,0 +1,11 @@
+name: orders_by_customer_state
+prompt: 订单数最多的 5 个州是哪些？给出订单数和 GMV。
+sql: |
+  SELECT customer_state, COUNT(*) AS orders, round(SUM(gmv), 2) AS gmv
+  FROM fct_orders
+  GROUP BY customer_state
+  ORDER BY orders DESC
+  LIMIT 5
+assertions:
+  - type: tool_call
+    tool: execute_semantic_query

@@ -1,0 +1,516 @@
+version: 2
+
+semantic_models:
+  - name: orders
+    description: >
+      Order-level fact. One row per order with merchandise, freight, payment, review and
+      delivery metrics already aggregated to order grain. Use this model for revenue, order
+      volume, delivery performance and cancellation questions.
+    model: ref('fct_orders')
+    defaults:
+      agg_time_dimension: purchase_ts
+    entities:
+      - name: order
+        type: primary
+        expr: order_id
+      - name: customer
+        type: foreign
+        expr: customer_unique_id
+    dimensions:
+      - name: purchase_ts
+        description: Timestamp when the customer placed the order.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: order_status
+        description: Order lifecycle status (delivered, shipped, canceled, unavailable, invoiced, processing, created, approved).
+        type: categorical
+      - name: customer_state
+        description: Two-letter Brazilian state of the customer.
+        type: categorical
+      - name: delivery_timeliness
+        description: >-
+          'late' when the order was delivered after the estimated delivery date, 'on_time'
+          otherwise. Only delivered orders can be late.
+        type: categorical
+        expr: case when is_late then 'late' else 'on_time' end
+      - name: has_items
+        description: Whether the order has at least one order item row.
+        type: categorical
+        expr: case when has_items then 'with_items' else 'without_items' end
+    measures:
+      - name: n_orders
+        description: Number of orders.
+        agg: sum
+        expr: "1"
+      - name: n_delivered
+        description: Number of delivered orders.
+        agg: sum
+        expr: case when is_delivered then 1 else 0 end
+      - name: n_canceled
+        description: Number of canceled orders.
+        agg: sum
+        expr: case when is_canceled then 1 else 0 end
+      - name: n_late
+        description: Number of delivered orders that arrived after the estimated delivery date.
+        agg: sum
+        expr: case when is_late then 1 else 0 end
+      - name: gmv_sum
+        description: Merchandise value plus freight value.
+        agg: sum
+        expr: gmv
+      - name: merchandise_sum
+        description: Sum of item prices, excluding freight.
+        agg: sum
+        expr: merchandise_value
+      - name: freight_sum
+        description: Sum of freight charged to customers.
+        agg: sum
+        expr: freight_value
+      - name: avg_review
+        description: Average review score of the orders in scope.
+        agg: average
+        expr: review_score
+      - name: avg_delivery_days
+        description: Average days between purchase and delivery, delivered orders only.
+        agg: average
+        expr: delivery_days
+
+  - name: order_items
+    description: >
+      Order-item fact, one row per item in an order. Use this model for units sold, product
+      category mix, seller performance and item-level prices.
+    model: ref('fct_order_items')
+    defaults:
+      agg_time_dimension: purchase_ts
+    entities:
+      - name: order_item
+        type: primary
+        expr: order_id || '-' || cast(order_item_id as varchar)
+      - name: order
+        type: foreign
+        expr: order_id
+      - name: product
+        type: foreign
+        expr: product_id
+      - name: seller
+        type: foreign
+        expr: seller_id
+      - name: customer
+        type: foreign
+        expr: customer_unique_id
+    dimensions:
+      - name: purchase_ts
+        description: Timestamp when the order was placed.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: order_status
+        description: Order lifecycle status of the parent order.
+        type: categorical
+      - name: category_en
+        description: Product category in English (unknown when the product has no category).
+        type: categorical
+      - name: seller_state
+        description: Two-letter Brazilian state of the seller.
+        type: categorical
+      - name: customer_state
+        description: Two-letter Brazilian state of the customer.
+        type: categorical
+    measures:
+      - name: n_items
+        description: Number of order items (units sold).
+        agg: sum
+        expr: "1"
+      - name: item_revenue_sum
+        description: Sum of item prices, excluding freight.
+        agg: sum
+        expr: item_price
+      - name: item_freight_sum
+        description: Sum of freight on order items.
+        agg: sum
+        expr: freight_value
+
+  - name: customers
+    description: >
+      Customer dimension, one row per customer_unique_id. Use this model for customer counts,
+      repeat-purchase behaviour and customer lifetime value.
+    model: ref('dim_customers')
+    defaults:
+      agg_time_dimension: first_order_ts
+    entities:
+      - name: customer
+        type: primary
+        expr: customer_unique_id
+    dimensions:
+      - name: first_order_ts
+        description: Timestamp of the customer's first order.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: customer_state
+        description: Two-letter Brazilian state of the customer.
+        type: categorical
+      - name: customer_type
+        description: "`repeat` when the customer placed more than one order, `one_time` otherwise."
+        type: categorical
+        expr: case when is_repeat_customer then 'repeat' else 'one_time' end
+    measures:
+      - name: n_customers
+        description: Number of distinct customers.
+        agg: sum
+        expr: "1"
+      - name: n_repeat_customers
+        description: Number of customers with more than one order.
+        agg: sum
+        expr: case when is_repeat_customer then 1 else 0 end
+      - name: total_gmv_sum
+        description: Sum of customers' lifetime merchandise plus freight value.
+        agg: sum
+        expr: total_gmv
+      - name: avg_customer_gmv
+        description: Average lifetime GMV per customer.
+        agg: average
+        expr: total_gmv
+      - name: avg_orders_per_customer
+        description: Average number of orders per customer.
+        agg: average
+        expr: order_count
+
+  - name: payments
+    description: >
+      Payment fact, one row per payment transaction. Use this model for payment-method mix,
+      instalment behaviour and collected payment value.
+    model: ref('fct_payments')
+    defaults:
+      agg_time_dimension: purchase_ts
+    entities:
+      - name: payment
+        type: primary
+        expr: order_id || '-' || cast(payment_sequential as varchar)
+      - name: order
+        type: foreign
+        expr: order_id
+    dimensions:
+      - name: purchase_ts
+        description: Timestamp when the order was placed.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: payment_type
+        description: Payment method (credit_card, boleto, voucher, debit_card, not_defined).
+        type: categorical
+      - name: installment_band
+        description: Number of instalments grouped into bands.
+        type: categorical
+      - name: order_status
+        description: Order lifecycle status of the parent order.
+        type: categorical
+    measures:
+      - name: n_payments
+        description: Number of payment transactions.
+        agg: sum
+        expr: "1"
+      - name: payment_sum
+        description: Total payment value collected.
+        agg: sum
+        expr: payment_value
+
+  - name: reviews
+    description: >
+      Review fact, one row per order (the latest review when an order has several). Use this
+      model for satisfaction and low-score analysis.
+    model: ref('fct_reviews')
+    defaults:
+      agg_time_dimension: review_creation_ts
+    entities:
+      - name: review
+        type: primary
+        expr: order_id
+    dimensions:
+      - name: review_creation_ts
+        description: Timestamp when the review was created.
+        type: time
+        type_params:
+          time_granularity: day
+      - name: review_score
+        description: Review score from 1 (worst) to 5 (best).
+        type: categorical
+        expr: cast(review_score as varchar)
+      - name: order_status
+        description: Order lifecycle status of the reviewed order.
+        type: categorical
+      - name: customer_state
+        description: Two-letter Brazilian state of the customer.
+        type: categorical
+    measures:
+      - name: n_reviews
+        description: Number of reviews.
+        agg: sum
+        expr: "1"
+      - name: n_low_reviews
+        description: Number of reviews with a score of 1 or 2.
+        agg: sum
+        expr: case when review_score <= 2 then 1 else 0 end
+
+  - name: products
+    description: Product dimension, one row per product in the catalogue.
+    model: ref('dim_products')
+    defaults:
+      agg_time_dimension: first_seen_ts
+    entities:
+      - name: product
+        type: primary
+        expr: product_id
+    dimensions:
+      - name: first_seen_ts
+        description: Timestamp of the product's first sale (null when never sold).
+        type: time
+        type_params:
+          time_granularity: day
+      - name: category_en
+        description: Product category in English (unknown when the product has no category).
+        type: categorical
+      - name: weight_band
+        description: Product weight grouped into bands.
+        type: categorical
+    measures:
+      - name: n_products
+        description: Number of products in the catalogue.
+        agg: sum
+        expr: "1"
+
+  - name: sellers
+    description: Seller dimension, one row per seller.
+    model: ref('dim_sellers')
+    defaults:
+      agg_time_dimension: first_seen_ts
+    entities:
+      - name: seller
+        type: primary
+        expr: seller_id
+    dimensions:
+      - name: first_seen_ts
+        description: Timestamp of the seller's first sale (null when never sold).
+        type: time
+        type_params:
+          time_granularity: day
+      - name: seller_state
+        description: Two-letter Brazilian state of the seller.
+        type: categorical
+    measures:
+      - name: n_sellers
+        description: Number of sellers.
+        agg: sum
+        expr: "1"
+
+metrics:
+  - name: orders
+    label: Orders
+    description: Number of orders placed.
+    type: simple
+    type_params:
+      measure: n_orders
+
+  - name: delivered_orders
+    label: Delivered orders
+    description: Number of orders with status delivered.
+    type: simple
+    type_params:
+      measure: n_delivered
+
+  - name: canceled_orders
+    label: Canceled orders
+    description: Number of orders with status canceled.
+    type: simple
+    type_params:
+      measure: n_canceled
+
+  - name: late_orders
+    label: Late orders
+    description: Delivered orders that arrived after the estimated delivery date.
+    type: simple
+    type_params:
+      measure: n_late
+
+  - name: gmv
+    label: GMV
+    description: Gross merchandise value — item prices plus freight.
+    type: simple
+    type_params:
+      measure: gmv_sum
+
+  - name: merchandise_value
+    label: Merchandise value
+    description: Item prices excluding freight.
+    type: simple
+    type_params:
+      measure: merchandise_sum
+
+  - name: freight_value
+    label: Freight value
+    description: Freight charged to customers.
+    type: simple
+    type_params:
+      measure: freight_sum
+
+  - name: average_order_value
+    label: Average order value
+    description: GMV divided by the number of orders.
+    type: ratio
+    type_params:
+      numerator: gmv
+      denominator: orders
+
+  - name: average_review_score
+    label: Average review score
+    description: Average review score (1-5) of the orders in scope.
+    type: simple
+    type_params:
+      measure: avg_review
+
+  - name: average_delivery_days
+    label: Average delivery days
+    description: Average days from purchase to delivery for delivered orders.
+    type: simple
+    type_params:
+      measure: avg_delivery_days
+
+  - name: late_delivery_rate
+    label: Late delivery rate
+    description: Late delivered orders divided by delivered orders.
+    type: ratio
+    type_params:
+      numerator: late_orders
+      denominator: delivered_orders
+
+  - name: cancellation_rate
+    label: Cancellation rate
+    description: Canceled orders divided by all orders.
+    type: ratio
+    type_params:
+      numerator: canceled_orders
+      denominator: orders
+
+  - name: items_sold
+    label: Items sold
+    description: Number of order items (units) sold.
+    type: simple
+    type_params:
+      measure: n_items
+
+  - name: item_revenue
+    label: Item revenue
+    description: Item prices excluding freight.
+    type: simple
+    type_params:
+      measure: item_revenue_sum
+
+  - name: item_freight
+    label: Item freight
+    description: Freight on order items.
+    type: simple
+    type_params:
+      measure: item_freight_sum
+
+  - name: average_item_price
+    label: Average item price
+    description: Item revenue divided by items sold.
+    type: ratio
+    type_params:
+      numerator: item_revenue
+      denominator: items_sold
+
+  - name: customers
+    label: Customers
+    description: Number of distinct customers (customer_unique_id).
+    type: simple
+    type_params:
+      measure: n_customers
+
+  - name: repeat_customers
+    label: Repeat customers
+    description: Customers with more than one order.
+    type: simple
+    type_params:
+      measure: n_repeat_customers
+
+  - name: repeat_customer_rate
+    label: Repeat customer rate
+    description: Repeat customers divided by all customers.
+    type: ratio
+    type_params:
+      numerator: repeat_customers
+      denominator: customers
+
+  - name: average_customer_value
+    label: Average customer value
+    description: Average lifetime GMV per customer.
+    type: simple
+    type_params:
+      measure: avg_customer_gmv
+
+  - name: average_orders_per_customer
+    label: Average orders per customer
+    description: Average number of orders per customer.
+    type: simple
+    type_params:
+      measure: avg_orders_per_customer
+
+  - name: payment_transactions
+    label: Payment transactions
+    description: Number of payment transactions.
+    type: simple
+    type_params:
+      measure: n_payments
+
+  - name: payment_value
+    label: Payment value
+    description: Total value collected through payments.
+    type: simple
+    type_params:
+      measure: payment_sum
+
+  - name: average_payment_value
+    label: Average payment value
+    description: Payment value divided by payment transactions.
+    type: ratio
+    type_params:
+      numerator: payment_value
+      denominator: payment_transactions
+
+  - name: reviews
+    label: Reviews
+    description: Number of reviews.
+    type: simple
+    type_params:
+      measure: n_reviews
+
+  - name: low_reviews
+    label: Low reviews
+    description: Reviews with a score of 1 or 2.
+    type: simple
+    type_params:
+      measure: n_low_reviews
+
+  - name: low_review_rate
+    label: Low review rate
+    description: Low reviews divided by all reviews.
+    type: ratio
+    type_params:
+      numerator: low_reviews
+      denominator: reviews
+
+  - name: catalog_products
+    label: Catalogue products
+    description: Number of products in the catalogue.
+    type: simple
+    type_params:
+      measure: n_products
+
+  - name: sellers
+    label: Sellers
+    description: Number of sellers.
+    type: simple
+    type_params:
+      measure: n_sellers

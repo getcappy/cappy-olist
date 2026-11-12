@@ -1,0 +1,8 @@
+name: average_order_value
+prompt: 全站客单价（AOV）是多少？
+sql: |
+  SELECT round(SUM(gmv) / COUNT(*), 2) AS average_order_value
+  FROM fct_orders
+assertions:
+  - type: tool_call
+    tool: execute_semantic_query

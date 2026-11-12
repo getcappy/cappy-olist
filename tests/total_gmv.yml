@@ -1,0 +1,8 @@
+name: total_gmv
+prompt: 这个平台的总 GMV 是多少？包含运费。
+sql: |
+  SELECT round(SUM(gmv), 2) AS gmv
+  FROM fct_orders
+assertions:
+  - type: tool_call
+    tool: execute_semantic_query

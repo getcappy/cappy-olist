@@ -1,0 +1,12 @@
+name: top_categories_by_revenue
+prompt: 商品收入最高的 5 个类目是哪些？
+sql: |
+  SELECT category_en, round(SUM(item_price), 2) AS item_revenue, COUNT(*) AS items_sold
+  FROM fct_order_items
+  WHERE category_en IS NOT NULL
+  GROUP BY category_en
+  ORDER BY item_revenue DESC
+  LIMIT 5
+assertions:
+  - type: tool_call
+    tool: execute_semantic_query
