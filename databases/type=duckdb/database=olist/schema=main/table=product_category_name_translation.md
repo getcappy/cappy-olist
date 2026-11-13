@@ -31,4 +31,6 @@ description: Translates the product_category_name to english.
 
 # 关联关系
 
-- `olist_products_dataset`：`product_category_name` → `product_category_name`（一对多）
+本表一行一个类目（`product_category_name`）。以下关系均从本表出发：
+
+- [olist_products_dataset](table=olist_products_dataset.md)：本表 `product_category_name` → 对方 `product_category_name`。**一对多**：本表一行（类目）对应对方多行（多个商品）。

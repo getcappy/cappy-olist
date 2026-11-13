@@ -38,5 +38,7 @@ description: This dataset includes data about the products sold by Olist.
 
 # 关联关系
 
-- `olist_order_items_dataset`：`product_id` → `product_id`（一对多）
-- `product_category_name_translation`：`product_category_name` → `product_category_name`（多对一）
+本表一行一个商品（`product_id`）。以下关系均从本表出发：
+
+- [olist_order_items_dataset](table=olist_order_items_dataset.md)：本表 `product_id` → 对方 `product_id`。**一对多**：本表一行（商品）对应对方多行（订单商品）。
+- [product_category_name_translation](table=product_category_name_translation.md)：本表 `product_category_name` → 对方 `product_category_name`。**多对一**：本表多行（多个商品）对应对方一行（一个类目）；本表类目可能为空。

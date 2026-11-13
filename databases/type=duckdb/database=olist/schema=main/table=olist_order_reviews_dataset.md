@@ -36,4 +36,6 @@ description: the reviews made by the customers.
 
 # 关联关系
 
-- `olist_orders_dataset`：`order_id` → `order_id`（多对一，需按订单去重）
+本表一行一条评价（原始数据，同一订单可能多条）。以下关系均从本表出发：
+
+- [olist_orders_dataset](table=olist_orders_dataset.md)：本表 `order_id` → 对方 `order_id`。**多对一**：本表多行（同一订单的多条评价）对应对方一行（一个订单）；先按订单去重再聚合。

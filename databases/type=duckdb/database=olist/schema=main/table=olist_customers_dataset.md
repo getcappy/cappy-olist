@@ -34,5 +34,7 @@ description: 该数据集包含客户及其位置的信息。请用它来识别�
 
 # 关联关系
 
-- `olist_orders_dataset`：`customer_id` → `customer_id`（一对多）
-- `olist_geolocation_dataset`：`customer_zip_code_prefix` → `geolocation_zip_code_prefix`（多对多，先按邮编聚合）
+本表一行一条订单客户记录（`customer_id`）。以下关系均从本表出发：
+
+- [olist_orders_dataset](table=olist_orders_dataset.md)：本表 `customer_id` → 对方 `customer_id`。**一对一**：每个 `customer_id` 只对应一个订单；按 `customer_unique_id` 看，一个客户可对应多个订单。
+- [olist_geolocation_dataset](table=olist_geolocation_dataset.md)：本表 `customer_zip_code_prefix` → 对方 `geolocation_zip_code_prefix`。**多对多**：本表多行（多个客户）↔ 对方多行（同一邮编多条坐标）；先把对方按邮编聚合。

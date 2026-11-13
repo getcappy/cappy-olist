@@ -44,6 +44,8 @@ description: This dataset includes data about the items purchased within each or
 
 # 关联关系
 
-- `olist_orders_dataset`：`order_id` → `order_id`（多对一）
-- `olist_products_dataset`：`product_id` → `product_id`（多对一）
-- `olist_sellers_dataset`：`seller_id` → `seller_id`（多对一）
+本表一行一个订单商品（`order_id + order_item_id`）。以下关系均从本表出发：
+
+- [olist_orders_dataset](table=olist_orders_dataset.md)：本表 `order_id` → 对方 `order_id`。**多对一**：本表多行（多个商品）对应对方一行（订单）。
+- [olist_products_dataset](table=olist_products_dataset.md)：本表 `product_id` → 对方 `product_id`。**多对一**：本表多行对应对方一行（一个商品）。
+- [olist_sellers_dataset](table=olist_sellers_dataset.md)：本表 `seller_id` → 对方 `seller_id`。**多对一**：本表多行对应对方一行（一个卖家）。

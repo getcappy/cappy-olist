@@ -40,7 +40,9 @@ description: This is the core dataset. From each order you might find all other 
 
 # 关联关系
 
-- `olist_customers_dataset`：`customer_id` → `customer_id`（多对一，`customer_id` 是每单一个）
-- `olist_order_items_dataset`：`order_id` → `order_id`（一对多，先聚合再 join）
-- `olist_order_payments_dataset`：`order_id` → `order_id`（一对多，先聚合再 join）
-- `olist_order_reviews_dataset`：`order_id` → `order_id`（一对多，先去重再 join）
+本表一行一个订单（`order_id`）。以下关系均从本表出发：
+
+- [olist_customers_dataset](table=olist_customers_dataset.md)：本表 `customer_id` → 对方 `customer_id`。**一对一**：每个 `customer_id` 只对应一个订单和一条客户记录；若按 `customer_unique_id` 聚合，一个客户可对应多个订单。
+- [olist_order_items_dataset](table=olist_order_items_dataset.md)：本表 `order_id` → 对方 `order_id`。**一对多**：本表一行（订单）对应对方多行（商品）；反向 join 时对方多行对应本表一行。
+- [olist_order_payments_dataset](table=olist_order_payments_dataset.md)：本表 `order_id` → 对方 `order_id`。**一对多**：本表一行（订单）对应对方多行（多笔支付）；反向为多对一。
+- [olist_order_reviews_dataset](table=olist_order_reviews_dataset.md)：本表 `order_id` → 对方 `order_id`。**一对多**：本表一行（订单）对应对方多行（多条评价）；使用前先按订单去重。

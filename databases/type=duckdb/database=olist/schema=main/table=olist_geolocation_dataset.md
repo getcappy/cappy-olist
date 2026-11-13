@@ -34,5 +34,7 @@ description: 该数据集包含巴西邮政编码（zip codes）及其经纬度�
 
 # 关联关系
 
-- `olist_customers_dataset`: `geolocation_zip_code_prefix` → 对应 `customer_zip_code_prefix`（一对多）
-- `olist_sellers_dataset`: `geolocation_zip_code_prefix` → 对应 `seller_zip_code_prefix`（一对多）
+本表一行一条邮编坐标记录（同一邮编可能多行）。以下关系均从本表出发：
+
+- [olist_customers_dataset](table=olist_customers_dataset.md)：本表 `geolocation_zip_code_prefix` → 对方 `customer_zip_code_prefix`。**多对多**：本表多行（同一邮编多条坐标）↔ 对方多行（多个客户）；先按邮编聚合本表。
+- [olist_sellers_dataset](table=olist_sellers_dataset.md)：本表 `geolocation_zip_code_prefix` → 对方 `seller_zip_code_prefix`。**多对多**：本表多行 ↔ 对方多行（多个卖家）；先按邮编聚合本表。

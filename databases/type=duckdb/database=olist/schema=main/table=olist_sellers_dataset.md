@@ -34,5 +34,7 @@ description: This dataset includes data about the sellers that fulfilled orders 
 
 # 关联关系
 
-- `olist_order_items_dataset`：`seller_id` → `seller_id`（一对多）
-- `olist_geolocation_dataset`：`seller_zip_code_prefix` → `geolocation_zip_code_prefix`（多对多，先聚合）
+本表一行一个卖家（`seller_id`）。以下关系均从本表出发：
+
+- [olist_order_items_dataset](table=olist_order_items_dataset.md)：本表 `seller_id` → 对方 `seller_id`。**一对多**：本表一行（卖家）对应对方多行（订单商品）。
+- [olist_geolocation_dataset](table=olist_geolocation_dataset.md)：本表 `seller_zip_code_prefix` → 对方 `geolocation_zip_code_prefix`。**多对多**：本表多行 ↔ 对方多行（同一邮编多条坐标）；先把对方按邮编聚合。

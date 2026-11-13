@@ -51,4 +51,6 @@ Olist 数据集 `payment_type` 字段的 5 种取值，都是巴西常见的支�
 
 # 关联关系
 
-- `olist_orders_dataset`：`order_id` → `order_id`（多对一）
+本表一行一笔支付（`order_id + payment_sequential`）。以下关系均从本表出发：
+
+- [olist_orders_dataset](table=olist_orders_dataset.md)：本表 `order_id` → 对方 `order_id`。**多对一**：本表多行（同一订单的多笔支付）对应对方一行（一个订单）。
