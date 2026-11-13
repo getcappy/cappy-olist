@@ -9,7 +9,7 @@ Olist 巴西电商数据集（Kaggle）的 cappy 分析项目。
 ## 结构
 
 ```text
-config.yaml                   # DuckDB 数据源，include main.olist_* + product_category_name_translation
+config.yaml                   # DuckDB 数据源（path 指向本地 olist.duckdb）
 RULES.md                      # 业务规则、关联/去重、指标口径、分析流程
 databases/                    # cappy sync 生成的 9 张原始表文档（描述/关联关系为手写）
 semantics/                    # OKF 知识包
@@ -17,15 +17,19 @@ semantics/                    # OKF 知识包
   log.md                      #   变更记录
   metrics/<metric>.md         #   type: Metric，Definition / Computation / Dimensions / Notes
   dimensions/<dim>.md         #   type: Dimension，Definition / SQL / Available in / Notes
+olist.duckdb                  # 57 MB，9 张原始表的 DuckDB 仓库（仓库根目录）
 scripts/load_olist.py         # 9 个 CSV → 9 张同名 DuckDB 表
 scripts/validate_okf.py       # 校验 OKF frontmatter 与内部链接
 docs/olist-data-dictionary.md # 原始字段、关联、指标公式与全量基线
 tests/                        # cappy test 评测用例（指标口径回归）
 ```
 
-数据文件不在仓库内：CSV 和 DuckDB 放在项目上一级的 `olist-data/`。
+仓库根目录包含 `olist.duckdb`（57 MB，9 张原始表）；原始 CSV 不入库。
+数据来源 Kaggle，许可证 CC BY-NC-SA 4.0，详见 [DATA_LICENSE.md](DATA_LICENSE.md)。
 
 ## 从零复现
+
+仓库根目录已经包含 `olist.duckdb`，可以直接使用。要从 CSV 重建：
 
 ```bash
 # 1. 下载 Kaggle 数据，解压 9 个 CSV 到 ../olist-data/raw
@@ -39,6 +43,8 @@ python scripts/load_olist.py
 python scripts/validate_okf.py
 cappy sync
 ```
+
+`config.yaml` 的 `path` 当前是本地绝对路径，clone 后改成自己的 `olist.duckdb` 路径。
 
 ## 语义模型（OKF）
 

@@ -1,4 +1,5 @@
 .meta/
 tests/outputs/
 *.duckdb
+!olist.duckdb
 __pycache__/
