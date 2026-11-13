@@ -4,21 +4,4 @@
 databases:
 - type: duckdb
   name: olist
-  include:
-  - main.olist_*
-  - main.product_category_name_translation
-  exclude: []
-  allow_listed_only: false
-  templates:
-  - columns
-  - preview
-  - profiling
-  # - query_history  -- Pulls most frequent queries / joins on each table
-  query_history_exclude_patterns: []
-  profiling:
-    refresh_policy: always
-    interval_days: 7
-  ai_summary:
-    refresh_policy: always
-    interval_days: 7
   path: /Users/mry/Downloads/cappy-agent/olist-data/olist.duckdb

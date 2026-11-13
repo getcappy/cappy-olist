@@ -1,31 +1,26 @@
 ---
 type: DuckDB Table
 title: Olist Sellers Dataset
-database: olist
-schema: main
-tags: []
+description: This dataset includes data about the sellers that fulfilled orders made at Olist.
 ---
 
 # 描述
 
-原始卖家表，一行一个卖家（共 3,095 行）。表名、列名与 Kaggle CSV 完全一致，**未做任何处理**。
+该数据集包含在 Olist 平台上完成订单履约的卖家（seller）信息。可以用它来查找卖家的所在地，并识别每个商品是由哪个卖家履约（发货）的。
+
+原始卖家表，一行一个卖家。
 
 - `seller_state` / `seller_city` 是卖家所在地。
 - 与订单商品关联用 `olist_order_items_dataset.seller_id = olist_sellers_dataset.seller_id`。
 
 # 表结构
 
-| Property | Value |
-|----------|-------|
-| **Row Count** | 3,095 |
-| **Column Count** | 4 |
-
 | Column | Type | Description |
 |--------|------|-------------|
-| `seller_id` | string |  |
-| `seller_zip_code_prefix` | string |  |
-| `seller_city` | string |  |
-| `seller_state` | string |  |
+| `seller_id` | string | seller unique identifier |
+| `seller_zip_code_prefix` | string | first 5 digits of seller zip code |
+| `seller_city` | string | seller city name |
+| `seller_state` | string | seller state |
 
 # 数据采样
 
@@ -36,21 +31,6 @@ tags: []
 | ce3ad9de960102d0677a81f5d0bb7b2d | 20031 | rio de janeiro | RJ |
 | c0f3eea2e14555b6faeea3dd58c1b1c3 | 04195 | sao paulo | SP |
 | 51a04a8a6bdcb23deccc82b0b80742cf | 12914 | braganca paulista | SP |
-
-# 数据剖析
-
-**Dataset:** `main`
-
-**Computed at:** `2026-11-12T12:21:05.392193+00:00`
-
-**Columns:** 4
-
-## Column Profiles (JSONL)
-
-- {"column": "seller_id", "type": "string", "total_count": 3095, "null_count": 0, "null_percentage": 0.0, "distinct_count": 3095}
-- {"column": "seller_zip_code_prefix", "type": "string", "total_count": 3095, "null_count": 0, "null_percentage": 0.0, "distinct_count": 2246}
-- {"column": "seller_city", "type": "string", "total_count": 3095, "null_count": 0, "null_percentage": 0.0, "distinct_count": 611}
-- {"column": "seller_state", "type": "string", "total_count": 3095, "null_count": 0, "null_percentage": 0.0, "distinct_count": 23, "top_values": [{"value": "SP", "count": 1849}, {"value": "PR", "count": 349}, {"value": "MG", "count": 244}, {"value": "SC", "count": 190}, {"value": "RJ", "count": 171}, {"value": "RS", "count": 129}, {"value": "GO", "count": 40}, {"value": "DF", "count": 30}, {"value": "ES", "count": 23}, {"value": "BA", "count": 19}]}
 
 # 关联关系
 
